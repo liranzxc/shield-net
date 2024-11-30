@@ -14,7 +14,7 @@
 ## Installation
 
 ```bash
-git clone https://github.com/username/shield-net.git
+git clone https://github.com/liranzxc/shield-net.git
 cd shield-net
-pip install -r requirements.txt
+pip install -r api/requirements.txt
 ```
