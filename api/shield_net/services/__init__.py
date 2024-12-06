@@ -20,3 +20,8 @@ def is_safe_prompt(prompt: str) -> bool:
     """
     # Add custom safety checks here
     return False
+
+
+## TODO
+class ShieldNetGuardRails:
+    pass
