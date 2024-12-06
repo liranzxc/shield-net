@@ -1,8 +1,23 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
+from api.llm_provider import LLMProvider
+from api.shield_net.decorators import shield_net
+from api.utils import prepare_messages
+
 load_dotenv()
-from api.llm_provider import  llm_provider
+
+
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER")
+LLM_NAME = os.environ.get("LLM_NAME")
+
+llm_provider = LLMProvider(provider=LLM_PROVIDER, model_name=LLM_NAME)
+
+
+def get_response(system_prompt:str,prompt:str) -> str:
+    messages = prepare_messages(system_prompt, prompt)
+    return llm_provider.invoke_llm(messages)
+
 
 # Initialize session state for chat histories and input
 if "chat_original_model_history" not in st.session_state:
@@ -57,7 +72,10 @@ if prompt:  # When the user enters a message
         system_prompt = None
 
     # Get responses from the LLM provider
-    original_response, shield_net_response = llm_provider.get_response(system_prompt, prompt)
+    original_response = get_response(system_prompt=system_prompt,prompt=prompt)
+
+    ## apply a decorator on the get response
+    shield_net_response = shield_net(get_response)(system_prompt=system_prompt,prompt=prompt)
 
     # Append responses to respective chat histories
     st.session_state.chat_original_model_history.append({"role": "assistant", "content": original_response})
