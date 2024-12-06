@@ -13,6 +13,8 @@
 
 ## Installation
 
+## install ollama on your computer 
+
 ```bash
 git clone https://github.com/liranzxc/shield-net.git
 cd shield-net
