@@ -18,3 +18,8 @@ git clone https://github.com/liranzxc/shield-net.git
 cd shield-net
 pip install -r api/requirements.txt
 ```
+
+## Run 
+```bash
+PYTHONPATH=. streamlit run api/main.py
+```
