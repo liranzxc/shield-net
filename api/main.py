@@ -3,6 +3,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from api.llm_provider import LLMProvider
 from api.shield_net.decorators import shield_net
+from api.simple_rag import SimpleRAG
 from api.utils import prepare_messages
 
 load_dotenv()
@@ -13,6 +14,7 @@ LLM_NAME = os.environ.get("LLM_NAME")
 
 llm_provider = LLMProvider(provider=LLM_PROVIDER, model_name=LLM_NAME)
 
+simple_rag_news_letter = SimpleRAG()
 
 def get_response(system_prompt:str,prompt:str) -> str:
     messages = prepare_messages(system_prompt, prompt)
@@ -30,6 +32,8 @@ if "system_prompt" not in st.session_state:
     st.session_state.system_prompt = ""  # To manage the system prompt state
 
 st.set_page_config(layout="wide")
+# Add title
+st.title("Shield-Net Demo - Protected Poison RAG")
 
 # Sidebar for system prompt
 st.sidebar.header("System Prompt Configuration")
@@ -71,6 +75,10 @@ if prompt:  # When the user enters a message
     else:
         system_prompt = None
 
+    context = simple_rag_news_letter.get_context(prompt)
+    print(context)
+    prompt = f"{context} \n {prompt}"
+
     # Get responses from the LLM provider
     original_response = get_response(system_prompt=system_prompt,prompt=prompt)
 
@@ -83,8 +91,8 @@ if prompt:  # When the user enters a message
 
 # Column 1: Chat A
 with col1:
-    st.header("Chat A - Baseline")
-    with st.container():
+    st.header("Poison RAG")
+    with st.container(height=500,border=True):
         chat_area = st.empty()
         chat_area.markdown('<div class="chat-column">', unsafe_allow_html=True)
         for chat in st.session_state.chat_original_model_history:
@@ -94,8 +102,8 @@ with col1:
 
 # Column 2: Chat B
 with col2:
-    st.header("Chat B - Baseline + Shield Net Model")
-    with st.container():
+    st.header("Poison RAG + Shield Net Model Protection")
+    with st.container(height=500,border=True):
         chat_area = st.empty()
         chat_area.markdown('<div class="chat-column">', unsafe_allow_html=True)
         for chat in st.session_state.chat_with_shield_net_history:
