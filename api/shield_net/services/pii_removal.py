@@ -1,16 +1,7 @@
 from gliner import GLiNER
+from concurrent.futures import ThreadPoolExecutor
 
-model = GLiNER.from_pretrained("gretelai/gretel-gliner-bi-large-v1.0")
-
-text = """
-On January 15, 2024, John Doe, born on April 22, 1980, and residing at 123 Maple Street, Laconia, NH, 03246, applied for a loan at Financial Trust Bank. His Social Security Number is 123-45-6789. He provided his email address as johndoe@example.com and his phone number as (555) 123-4567. His wife's name is Jane Doe, and her date of birth is March 10, 1982. John's driver's license number is D12345678, issued by the state of New Hampshire. 
-
-Additionally, he submitted a copy of his recent utility bill, which included his account number 987654321 and the address of his service location. John has two children, Emily Doe and Michael Doe, who attend Laconia Elementary School. Emily's school email is emily.doe@schoolmail.com, and Michael's school email is michael.doe@schoolmail.com. The family’s medical insurance policy number is 789456123, provided by HealthSecure Insurance. 
-
-John's employer is ABC Corp, located at 456 Oak Avenue, Laconia, NH, where he holds the position of Senior Manager. His employee ID is 7890. During the loan application process, John also mentioned his emergency contact, his brother, Robert Doe, who can be reached at (555) 987-6543 and robert.doe@example.com. The loan officer assigned to his case is Sarah Smith, reachable at (555) 654-3210 and ssmith@financialtrust.com.
-
-"""
-
+#Define the labels
 labels = [
     "medical_record_number",
     "date_of_birth",
@@ -27,6 +18,7 @@ labels = [
     "ipv4",
     "credit_card_number",
     "license_plate",
+    "license_number",
     "address",
     "user_name",
     "device_identifier",
@@ -56,10 +48,51 @@ labels = [
     "pin"
 ]
 
-entities = model.predict_entities(text, labels, threshold=0.7, multi_label=True)
-
-for entity in entities:
-    text = text.replace(entity['text'], "########") 
-print(text)
-
+class ReplacePII:
+    """
+        A class to replace personally identifiable information (PII) in text using the GLiNER model.
+    """
+    def __init__(self, model_name: str = "gretelai/gretel-gliner-bi-small-v1.0"):
+        """
+        Initialize the ReplacePII class with a GLiNER model.
+        
+        Args:
+            model_name (str): The name of the GLiNER model to use. Defaults to "gretelai/gretel-gliner-bi-small-v1.0".
+        """
+        self.model_name = model_name
+        if self.model_name == "gretelai/gretel-gliner-bi-small-v1.0":
+            self.model = GLiNER.from_pretrained(self.model_name)
+            
+    def process_chunk(self, chunk: str) -> str:
+        """
+        Process a chunk of text to replace PII.
+        
+        Args:
+            chunk (str): The text chunk to process.
+        
+        Returns:
+            str: The processed text chunk with PII replaced.
+        """
+        if not chunk.strip():
+            return chunk  # Return as-is for empty or whitespace-only chunks
+        entities = self.model.predict_entities(chunk, labels, threshold=0.1, multi_label=False)
+        for entity in entities:
+            chunk = chunk.replace(entity['text'], "########")
+        return chunk
+    
+    def execute_pii_removal(self, input: str) -> str:
+        """
+        Execute PII removal on the input text.
+        
+        Args:
+            input_text (str): The input text to remove PII from.
+        
+        Returns:
+            str: The input text with PII removed.
+        """
+        chunks = input.strip().split('. ')
+        with ThreadPoolExecutor() as executor:
+            self.processed_chunks = list(executor.map(self.process_chunk, chunks))
+        response = ' '.join(self.processed_chunks)
+        return response
 
