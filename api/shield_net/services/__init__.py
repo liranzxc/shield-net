@@ -1,6 +1,6 @@
-from pii_removal import ReplacePII
+from pii_removal import replace_pii
 
-def post_process_content(content: str, replace_pii: ReplacePII) -> str:
+def post_process_content(content: str) -> str:
     """
     Applies post-processing to the LLM's response content.
 

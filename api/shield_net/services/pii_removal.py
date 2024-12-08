@@ -96,3 +96,4 @@ class ReplacePII:
         response = ' '.join(self.processed_chunks)
         return response
 
+replace_pii = ReplacePII()
