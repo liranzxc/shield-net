@@ -19,7 +19,19 @@ def is_safe_prompt(prompt: str) -> bool:
     :return: True if the prompt is safe, False otherwise.
     """
     # Add custom safety checks here
-    return False
+    # Tokenize the input prompt
+    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+
+    # Get model predictions
+    with torch.no_grad():
+        outputs = model(**inputs)
+
+    # Extract the predicted label
+    prediction = outputs.logits.argmax(dim=-1).item()
+
+    # Interpret the prediction
+    # Label 0 -> Safe (Allowed), Label 1 -> Unsafe (Disallowed)
+    return prediction == 0
 
 
 ## TODO
