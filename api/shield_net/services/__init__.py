@@ -1,4 +1,5 @@
-from pii_removal import replace_pii
+from api.shield_net.services.pii_removal import replace_pii
+
 
 def post_process_content(content: str) -> str:
     """
@@ -19,7 +20,7 @@ def is_safe_prompt(prompt: str) -> bool:
     :return: True if the prompt is safe, False otherwise.
     """
     # Add custom safety checks here
-    return False
+    return True
 
 
 ## TODO
