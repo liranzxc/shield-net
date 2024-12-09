@@ -3,23 +3,39 @@ import streamlit as st
 from dotenv import load_dotenv
 from api.llm_provider import LLMProvider
 from api.shield_net.decorators import shield_net
+from api.simple_rag import SimpleRAG
 from api.utils import prepare_messages
 
+# Load environment variables
 load_dotenv()
 
+st.set_page_config(layout="wide")
 
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER")
-LLM_NAME = os.environ.get("LLM_NAME")
+# Cache the LLMProvider initialization
+@st.cache_resource
+def initialize_llm_provider():
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER")
+    LLM_NAME = os.environ.get("LLM_NAME")
+    return LLMProvider(provider=LLM_PROVIDER, model_name=LLM_NAME)
 
-llm_provider = LLMProvider(provider=LLM_PROVIDER, model_name=LLM_NAME)
+# Cache the SimpleRAG initialization
+@st.cache_resource
+def initialize_simple_rag():
+    return SimpleRAG()
 
+# Initialize cached resources
+llm_provider = initialize_llm_provider()
+simple_rag_news_letter = initialize_simple_rag()
 
-def get_response(system_prompt:str,prompt:str) -> str:
+# Function to get LLM response
+def get_response(system_prompt: str, prompt: str) -> str:
+    print(system_prompt)
+    print(prompt)
     messages = prepare_messages(system_prompt, prompt)
     return llm_provider.invoke_llm(messages)
 
-
-# Initialize session state for chat histories and input
+system_prompt_post_expert =  "you are expert to generate social media posts"
+# Initialize session state variables
 if "chat_original_model_history" not in st.session_state:
     st.session_state.chat_original_model_history = []
 if "chat_with_shield_net_history" not in st.session_state:
@@ -27,15 +43,16 @@ if "chat_with_shield_net_history" not in st.session_state:
 if "input_text" not in st.session_state:
     st.session_state.input_text = ""  # To manage the input field state
 if "system_prompt" not in st.session_state:
-    st.session_state.system_prompt = ""  # To manage the system prompt state
+    st.session_state.system_prompt = system_prompt_post_expert  # To manage the system prompt state
 
-st.set_page_config(layout="wide")
+# Set page configuration
+st.title("Shield-Net Demo - Protected Poison RAG")
 
-# Sidebar for system prompt
+# Sidebar for system prompt configuration
 st.sidebar.header("System Prompt Configuration")
 system_prompt_input = st.sidebar.text_area(
     "Enter a system prompt (optional):",
-    value=st.session_state.system_prompt,
+    value=st.session_state.system_prompt or system_prompt_post_expert ,
     placeholder="Add your system-level prompt here..."
 )
 if system_prompt_input:
@@ -71,11 +88,19 @@ if prompt:  # When the user enters a message
     else:
         system_prompt = None
 
-    # Get responses from the LLM provider
-    original_response = get_response(system_prompt=system_prompt,prompt=prompt)
+    # Get context from SimpleRAG (cached)
+    @st.cache_data
+    def get_context_from_simple_rag(prompt):
+        return simple_rag_news_letter.get_context(prompt)
 
-    ## apply a decorator on the get response
-    shield_net_response = shield_net(get_response)(system_prompt=system_prompt,prompt=prompt)
+    context = get_context_from_simple_rag(prompt)
+    prompt = f"Context: {context} \n Question: {prompt}"
+
+    # Get responses from the LLM provider
+    original_response = get_response(system_prompt=system_prompt, prompt=prompt)
+
+    # Apply Shield-Net decorator to get response
+    shield_net_response = shield_net(get_response)(system_prompt=system_prompt, prompt=prompt)
 
     # Append responses to respective chat histories
     st.session_state.chat_original_model_history.append({"role": "assistant", "content": original_response})
@@ -83,22 +108,16 @@ if prompt:  # When the user enters a message
 
 # Column 1: Chat A
 with col1:
-    st.header("Chat A - Baseline")
+    st.header("Poison RAG")
     with st.container():
-        chat_area = st.empty()
-        chat_area.markdown('<div class="chat-column">', unsafe_allow_html=True)
         for chat in st.session_state.chat_original_model_history:
             with st.chat_message(chat["role"]):
                 st.markdown(chat["content"])
-        chat_area.markdown('</div>', unsafe_allow_html=True)
 
 # Column 2: Chat B
 with col2:
-    st.header("Chat B - Baseline + Shield Net Model")
+    st.header("Poison RAG + Shield Net Model Protection")
     with st.container():
-        chat_area = st.empty()
-        chat_area.markdown('<div class="chat-column">', unsafe_allow_html=True)
         for chat in st.session_state.chat_with_shield_net_history:
             with st.chat_message(chat["role"]):
                 st.markdown(chat["content"])
-        chat_area.markdown('</div>', unsafe_allow_html=True)

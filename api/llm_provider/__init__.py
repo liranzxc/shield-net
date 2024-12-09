@@ -25,7 +25,7 @@ class LLMProvider:
         """
 
         if self.provider == "ollama":
-            response = ollama.chat(model=self.model_name,options={'temperature' : 0,'num_predict': 500}, messages=messages)
+            response = ollama.chat(model=self.model_name,options={'temperature' : 0}, messages=messages)
             return response.get("message", {}).get("content", "")
         raise NotImplementedError(f"Provider '{self.provider}' is not implemented")
 
